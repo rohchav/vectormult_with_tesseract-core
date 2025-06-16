@@ -1,10 +1,11 @@
 import streamlit as st
-import numpy as np
-from tesseract_api import InputSchema, apply, apply_with_numpy
+import requests
 
 st.title("Vector Element-wise Multiplication")
 
 st.write("Enter two vectors of the same length (comma-separated):")
+
+TESSERACT_URL = "http://localhost:8000/apply"  # Adjust if your Tesseract service uses a different URL or port
 
 with st.form("vectormult_form"):
     a_str = st.text_input("Vector a", "1,2,3")
@@ -13,13 +14,15 @@ with st.form("vectormult_form"):
 
     if submitted:
         try:
-            # Convert input strings to numpy arrays
-            a = np.array([float(x) for x in a_str.split(",")], dtype=np.float32)
-            b = np.array([float(x) for x in b_str.split(",")], dtype=np.float32)
-            # Create InputSchema instance
-            inputs = InputSchema(a=a, b=b)
-            # Get the output using the apply function
-            output = apply_with_numpy(inputs)
-            st.write("Result:", output.result)
+            a = [float(x) for x in a_str.split(",")]
+            b = [float(x) for x in b_str.split(",")]
+            payload = {"inputs": {"a": a, "b": b}}
+            response = requests.post(TESSERACT_URL, json=payload)
+            if response.ok:
+                result_obj = response.json().get("result", {})
+                buffer = result_obj.get("data", {}).get("buffer", [])
+                st.write("Result:", buffer)
+            else:
+                st.error(f"Tesseract error: {response.text}")
         except Exception as e:
             st.error(f"Error: {e}")
